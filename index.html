@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎁 Ruleta de Amigo Secreto Familiar</title>
+<title>🎁 Ruleta de Amigo Navideño Familiar</title>
 <style>
   :root{
     --bg:#1b1033;
@@ -212,18 +212,41 @@
   .dash-list li:first-child{ border-top:none; }
   .dash-ok{ color:var(--ok); font-weight:600; }
   .dash-pending{ color:var(--pending); }
+  .pin-input{
+    width:100%;
+    padding:12px 14px;
+    border-radius:12px;
+    border:none;
+    font-size:1rem;
+    background:#352260;
+    color:var(--text);
+    margin-bottom:10px;
+    letter-spacing:2px;
+  }
+  .auth-box p{ margin:0 0 12px; line-height:1.4; }
+  .auth-error{
+    color:var(--accent);
+    font-size:0.85rem;
+    margin-top:-4px;
+    margin-bottom:10px;
+  }
 </style>
 </head>
 <body>
 
-  <h1>🎁 Amigo Secreto Familiar</h1>
-  <p class="subtitle">Selecciona tu nombre y gira la ruleta para descubrir a quién le regalas. El resultado se sincroniza al instante en todos los dispositivos: nadie puede girar dos veces ni repetirse.</p>
+  <h1>🎁 Amigo Navideño Familiar</h1>
+  <p class="subtitle">Selecciona tu nombre y crea (o ingresa) tu clave para ver tu resultado. El resultado se sincroniza al instante en todos los dispositivos: nadie puede girar dos veces, ni ver el resultado de otra persona sin su clave.</p>
 
   <div class="card">
     <div id="statusPill" class="status-pill" style="display:none;"></div>
+
     <select id="personSelect" disabled>
       <option value="" disabled selected>-- Conectando... --</option>
     </select>
+
+    <div id="greeting" class="hint"></div>
+
+    <div id="authArea"></div>
 
     <div id="wheelArea"></div>
 
@@ -266,14 +289,27 @@
   //     for insert with check (true);
   //   alter publication supabase_realtime add table reveals;
   //
+  //   create table claims (
+  //     giver_id text primary key,
+  //     pin_hash text not null,
+  //     created_at timestamptz default now()
+  //   );
+  //   alter table claims enable row level security;
+  //   create policy "lectura publica claims" on claims
+  //     for select using (true);
+  //   create policy "insercion publica claims" on claims
+  //     for insert with check (true);
+  //   alter publication supabase_realtime add table claims;
+  //
   // (No se crean políticas de UPDATE ni DELETE a propósito: así
-  // nadie puede borrar o pisar un resultado ya revelado desde el
-  // navegador, ni siquiera el que giró.)
+  // nadie puede borrar o pisar un resultado ya revelado, ni
+  // cambiar la clave de otra persona, desde el navegador.)
   // ============================================================
   const SUPABASE_URL = "https://zqcqdqezsigiopuqzodx.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_PPiG6Zfvg6d251Ixrh3kKQ_Y7cbEgoB";
 
   const REVEALS_TABLE = "reveals";
+  const CLAIMS_TABLE = "claims";
   let supabaseClient = null;
   let supabaseEnabled = false;
 
@@ -318,7 +354,7 @@
   // Semilla fija: hace que el sorteo sea SIEMPRE el mismo en cualquier
   // dispositivo/navegador que abra esta página, sin necesidad de servidor.
   // Si algún día quieres un sorteo nuevo, cambia este número.
-  const DRAW_SEED = 20261205;
+  const DRAW_SEED = 73918426;
 
   // ---------- PRNG determinista (mulberry32) ----------
   function makeRng(seed){
@@ -457,8 +493,72 @@
     }
   }
 
+  // ---------- Clave personal (misma para todos el enlace, protege el resultado) ----------
+  const LOCAL_CLAIMS_KEY = "amigoSecretoFamiliar_local_claims";
+  const claimsMap = {}; // giver_id -> pin_hash
+  let authenticated = false;
+
+  async function hashPin(pin){
+    const enc = new TextEncoder().encode(pin);
+    const buf = await crypto.subtle.digest("SHA-256", enc);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  function loadLocalClaims(){
+    try{
+      const raw = localStorage.getItem(LOCAL_CLAIMS_KEY);
+      return raw ? JSON.parse(raw) : {};
+    }catch(e){ return {}; }
+  }
+
+  function saveLocalClaims(map){
+    localStorage.setItem(LOCAL_CLAIMS_KEY, JSON.stringify(map));
+  }
+
+  async function loadClaims(){
+    if(supabaseEnabled){
+      try{
+        const { data, error } = await supabaseClient.from(CLAIMS_TABLE).select("giver_id, pin_hash");
+        if(error) throw error;
+        (data || []).forEach(r => { claimsMap[r.giver_id] = r.pin_hash; });
+
+        supabaseClient
+          .channel("claims-sync")
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: CLAIMS_TABLE }, (payload) => {
+            claimsMap[payload.new.giver_id] = payload.new.pin_hash;
+          })
+          .subscribe();
+      }catch(e){
+        console.error("No se pudieron cargar las claves desde Supabase:", e);
+      }
+    } else {
+      Object.assign(claimsMap, loadLocalClaims());
+    }
+  }
+
+  async function createClaim(giverId, pin){
+    const hash = await hashPin(pin);
+    if(supabaseEnabled){
+      const { error } = await supabaseClient.from(CLAIMS_TABLE).insert({ giver_id: giverId, pin_hash: hash });
+      if(error){
+        if(error.code === "23505") return { ok: false, reason: "already_claimed" };
+        return { ok: false, reason: "error" };
+      }
+    } else {
+      saveLocalClaims({ ...loadLocalClaims(), [giverId]: hash });
+    }
+    claimsMap[giverId] = hash;
+    return { ok: true };
+  }
+
+  async function verifyPin(giverId, pin){
+    const hash = await hashPin(pin);
+    return claimsMap[giverId] === hash;
+  }
+
   // ---------- UI ----------
   const personSelect = document.getElementById("personSelect");
+  const authArea = document.getElementById("authArea");
   const wheelArea = document.getElementById("wheelArea");
   const actionArea = document.getElementById("actionArea");
   const resultArea = document.getElementById("resultArea");
@@ -466,13 +566,7 @@
   const connNote = document.getElementById("connNote");
   const resetBtn = document.getElementById("resetBtn");
   const dashboardList = document.getElementById("dashboardList");
-
-  PEOPLE.forEach((p, idx) => {
-    const opt = document.createElement("option");
-    opt.value = idx;
-    opt.textContent = p.name;
-    personSelect.appendChild(opt);
-  });
+  const greeting = document.getElementById("greeting");
 
   function updateStatusPill(){
     const done = state.revealedGivers.length;
@@ -491,6 +585,98 @@
     });
   }
 
+  function renderGate(){
+    wheelArea.innerHTML = "";
+    actionArea.innerHTML = "";
+    resultArea.innerHTML = "";
+    authArea.innerHTML = "";
+    updateStatusPill();
+
+    if(currentGiverIdx === null){
+      greeting.textContent = "";
+      return;
+    }
+
+    const giver = PEOPLE[currentGiverIdx];
+    const giverId = giver.id;
+
+    if(authenticated){
+      greeting.textContent = `Hola, ${giver.name} 👋`;
+      renderForPerson(currentGiverIdx);
+      return;
+    }
+
+    greeting.textContent = "";
+    const hasClaim = !!claimsMap[giverId];
+
+    const box = document.createElement("div");
+    box.className = "result-box auth-box";
+
+    const input = document.createElement("input");
+    input.type = "password";
+    input.className = "pin-input";
+    input.autocomplete = "off";
+
+    const errorMsg = document.createElement("div");
+    errorMsg.className = "auth-error";
+
+    const btn = document.createElement("button");
+    btn.className = "btn-main";
+
+    if(!hasClaim){
+      box.innerHTML = `<p>Hola <b>${giver.name}</b>. Es tu primera vez aquí: crea una clave para proteger tu resultado (la necesitarás cada vez que quieras volver a verlo). <b>No la olvides</b>, no se puede recuperar.</p>`;
+      input.placeholder = "Crea tu clave (mínimo 4 caracteres)";
+      btn.textContent = "Guardar clave y continuar";
+    } else {
+      box.innerHTML = `<p>Hola <b>${giver.name}</b>. Ingresa tu clave para ver tu resultado.</p>`;
+      input.placeholder = "Tu clave";
+      btn.textContent = "Ingresar";
+    }
+
+    box.appendChild(input);
+    box.appendChild(errorMsg);
+    box.appendChild(btn);
+    authArea.appendChild(box);
+    input.focus();
+
+    async function attempt(){
+      const pin = input.value.trim();
+      if(!hasClaim){
+        if(pin.length < 4){
+          errorMsg.textContent = "La clave debe tener al menos 4 caracteres.";
+          return;
+        }
+        btn.disabled = true;
+        const res = await createClaim(giverId, pin);
+        btn.disabled = false;
+        if(res.ok){
+          authenticated = true;
+          renderGate();
+        } else if(res.reason === "already_claimed"){
+          errorMsg.textContent = "Alguien ya creó una clave para este nombre justo ahora. Si eres tú, ingresa tu clave.";
+          renderGate();
+        } else {
+          errorMsg.textContent = "Ocurrió un error, intenta de nuevo.";
+        }
+      } else {
+        btn.disabled = true;
+        const ok = await verifyPin(giverId, pin);
+        btn.disabled = false;
+        if(ok){
+          authenticated = true;
+          renderGate();
+        } else {
+          errorMsg.textContent = "Clave incorrecta.";
+          input.value = "";
+          input.focus();
+        }
+      }
+    }
+
+    btn.addEventListener("click", attempt);
+    input.addEventListener("keydown", (e) => { if(e.key === "Enter") attempt(); });
+  }
+
   function renderForPerson(giverIdx){
     wheelArea.innerHTML = "";
     actionArea.innerHTML = "";
@@ -505,7 +691,7 @@
       resultArea.innerHTML = `
         <div class="result-box">
           Ya giraste, <b>${giver.name}</b>.<br>
-          Tu amigo secreto es: <b>${PEOPLE[recIdx].name}</b> 🎉
+          Tu amigo navideño es: <b>${PEOPLE[recIdx].name}</b> 🎉
         </div>
         <div class="hint">Shhh... no se lo digas a nadie 🤫</div>
       `;
@@ -531,12 +717,20 @@
 
   function refreshCurrentView(){
     if(currentGiverIdx !== null){
-      renderForPerson(currentGiverIdx);
+      renderGate();
     } else {
       updateStatusPill();
     }
     renderDashboard();
   }
+
+  personSelect.addEventListener("change", () => {
+    const idx = parseInt(personSelect.value, 10);
+    if(isNaN(idx)) return;
+    currentGiverIdx = idx;
+    authenticated = false;
+    renderGate();
+  });
 
   function buildWheel(candidateIdxs, targetIdx, giverIdx){
     const wrap = document.createElement("div");
@@ -601,26 +795,16 @@
 
     spinBtn.addEventListener("click", () => {
       spinBtn.disabled = true;
-      personSelect.disabled = true;
       wheel.style.transition = "transform 3.2s cubic-bezier(0.17, 0.67, 0.12, 0.99)";
       wheel.style.transform = `rotate(${finalRotation}deg)`;
 
       setTimeout(async () => {
         await markRevealed(giverIdx);
-        personSelect.disabled = false;
         renderForPerson(giverIdx);
         renderDashboard();
       }, 3300);
     });
   }
-
-  personSelect.addEventListener("change", () => {
-    const idx = parseInt(personSelect.value, 10);
-    if(!isNaN(idx)){
-      currentGiverIdx = idx;
-      renderForPerson(idx);
-    }
-  });
 
   resetBtn.addEventListener("click", () => {
     if(supabaseEnabled){
@@ -643,15 +827,22 @@
   });
 
   // ---------- Arranque ----------
-  function enableSelectUI(message){
+  function finishLoading(message){
     state.ready = true;
+    connNote.textContent = message;
     personSelect.disabled = false;
     personSelect.options[0].textContent = "-- Selecciona tu nombre --";
-    connNote.textContent = message;
     refreshCurrentView();
   }
 
   async function start(){
+    PEOPLE.forEach((p, idx) => {
+      const opt = document.createElement("option");
+      opt.value = idx;
+      opt.textContent = p.name;
+      personSelect.appendChild(opt);
+    });
+
     supabaseEnabled = await initSupabase();
 
     if(supabaseEnabled){
@@ -670,16 +861,19 @@
           })
           .subscribe();
 
-        enableSelectUI("🟢 Sincronizado en vivo con todos los dispositivos.");
+        await loadClaims();
+        finishLoading("🟢 Sincronizado en vivo con todos los dispositivos.");
       }catch(e){
         console.error("Error conectando con Supabase:", e);
         supabaseEnabled = false;
         applyRevealedIds(loadLocalRevealedIds());
-        enableSelectUI("🟡 No se pudo conectar: funcionando solo en este dispositivo.");
+        await loadClaims();
+        finishLoading("🟡 No se pudo conectar: funcionando solo en este dispositivo.");
       }
     } else {
       applyRevealedIds(loadLocalRevealedIds());
-      enableSelectUI("🟡 Modo local: el progreso solo se guarda en este dispositivo (configura Supabase para sincronizar entre todos).");
+      await loadClaims();
+      finishLoading("🟡 Modo local: el progreso solo se guarda en este dispositivo (configura Supabase para sincronizar entre todos).");
     }
   }
 
