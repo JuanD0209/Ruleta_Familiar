@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎁 Ruleta de Amigo Secreto Familiar</title>
+<style>
+  :root{
+    --bg:#1b1033;
+    --bg2:#2a1a4d;
+    --card:#241642;
+    --accent:#ff5d8f;
+    --accent2:#ffd166;
+    --accent3:#4fd1c5;
+    --accent4:#7b61ff;
+    --text:#f4f0ff;
+    --muted:#b3a6d9;
+    --ok:#4fd1c5;
+    --pending:#b3a6d9;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:'Segoe UI', Tahoma, Verdana, sans-serif;
+    background:radial-gradient(circle at top, var(--bg2), var(--bg));
+    color:var(--text);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:24px 16px 60px;
+  }
+  h1{
+    text-align:center;
+    font-size:1.8rem;
+    margin:10px 0 4px;
+  }
+  p.subtitle{
+    color:var(--muted);
+    text-align:center;
+    margin:0 0 24px;
+    max-width:480px;
+  }
+  .card{
+    background:var(--card);
+    border-radius:20px;
+    padding:24px;
+    width:100%;
+    max-width:440px;
+    box-shadow:0 10px 40px rgba(0,0,0,0.4);
+    text-align:center;
+  }
+  select{
+    width:100%;
+    padding:12px 14px;
+    border-radius:12px;
+    border:none;
+    font-size:1rem;
+    background:#352260;
+    color:var(--text);
+    margin-bottom:16px;
+    appearance:none;
+  }
+  select:disabled{ opacity:0.6; }
+  button{
+    border:none;
+    border-radius:12px;
+    padding:12px 20px;
+    font-size:1rem;
+    font-weight:600;
+    cursor:pointer;
+    transition:transform .15s ease, opacity .15s ease;
+  }
+  button:active{ transform:scale(0.96); }
+  button:disabled{ opacity:0.5; cursor:not-allowed; }
+  .btn-main{
+    background:linear-gradient(135deg, var(--accent), var(--accent4));
+    color:white;
+    width:100%;
+  }
+  .wheel-wrap{
+    position:relative;
+    width:300px;
+    height:300px;
+    margin:10px auto 20px;
+  }
+  .pointer{
+    position:absolute;
+    top:-14px;
+    left:50%;
+    transform:translateX(-50%);
+    width:0; height:0;
+    border-left:14px solid transparent;
+    border-right:14px solid transparent;
+    border-top:22px solid var(--accent2);
+    z-index:5;
+    filter:drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+  }
+  .wheel-outer{
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    border:8px solid #352260;
+    overflow:hidden;
+    position:relative;
+    box-shadow:inset 0 0 20px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,255,255,0.05);
+  }
+  .wheel{
+    width:100%;
+    height:100%;
+    position:relative;
+    transform:rotate(0deg);
+  }
+  .wheel-center-dot{
+    position:absolute;
+    top:50%; left:50%;
+    width:16px; height:16px;
+    background:var(--accent2);
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    z-index:4;
+    box-shadow:0 0 0 4px var(--card);
+  }
+  .segment-label{
+    position:absolute;
+    top:50%;
+    left:50%;
+    width:140px;
+    margin-left:-70px;
+    text-align:right;
+    font-size:0.72rem;
+    font-weight:700;
+    color:#1b1033;
+    text-shadow:0 1px 0 rgba(255,255,255,0.3);
+    pointer-events:none;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .result-box{
+    margin-top:12px;
+    padding:18px;
+    border-radius:14px;
+    background:linear-gradient(135deg, rgba(79,209,197,0.15), rgba(123,97,255,0.15));
+    border:1px solid rgba(255,255,255,0.1);
+    font-size:1.1rem;
+    line-height:1.4;
+  }
+  .result-box b{
+    color:var(--accent2);
+    font-size:1.3rem;
+  }
+  .hint{
+    color:var(--muted);
+    font-size:0.85rem;
+    margin-top:10px;
+  }
+  .conn-note{
+    color:var(--muted);
+    font-size:0.8rem;
+    margin-top:14px;
+  }
+  .footer-actions{
+    margin-top:30px;
+    width:100%;
+    max-width:440px;
+    text-align:center;
+  }
+  .btn-reset{
+    background:transparent;
+    color:var(--muted);
+    border:1px solid rgba(255,255,255,0.15);
+    font-size:0.8rem;
+    padding:8px 14px;
+  }
+  .status-pill{
+    display:inline-block;
+    background:rgba(255,255,255,0.08);
+    color:var(--muted);
+    font-size:0.75rem;
+    padding:4px 10px;
+    border-radius:20px;
+    margin-bottom:14px;
+  }
+  details.dashboard{
+    margin-top:18px;
+    width:100%;
+    max-width:440px;
+    background:var(--card);
+    border-radius:16px;
+    padding:4px 18px;
+  }
+  details.dashboard summary{
+    cursor:pointer;
+    padding:12px 0;
+    color:var(--muted);
+    font-size:0.9rem;
+    font-weight:600;
+  }
+  .dash-list{
+    list-style:none;
+    margin:0;
+    padding:0 0 14px;
+  }
+  .dash-list li{
+    display:flex;
+    justify-content:space-between;
+    padding:6px 0;
+    font-size:0.88rem;
+    border-top:1px solid rgba(255,255,255,0.06);
+  }
+  .dash-list li:first-child{ border-top:none; }
+  .dash-ok{ color:var(--ok); font-weight:600; }
+  .dash-pending{ color:var(--pending); }
+</style>
+</head>
+<body>
+
+  <h1>🎁 Amigo Secreto Familiar</h1>
+  <p class="subtitle">Selecciona tu nombre y gira la ruleta para descubrir a quién le regalas. El resultado se sincroniza al instante en todos los dispositivos: nadie puede girar dos veces ni repetirse.</p>
+
+  <div class="card">
+    <div id="statusPill" class="status-pill" style="display:none;"></div>
+    <select id="personSelect" disabled>
+      <option value="" disabled selected>-- Conectando... --</option>
+    </select>
+
+    <div id="wheelArea"></div>
+
+    <div id="actionArea"></div>
+
+    <div id="resultArea"></div>
+
+    <div id="connNote" class="conn-note"></div>
+  </div>
+
+  <details class="dashboard">
+    <summary>📋 Ver estado general (en vivo)</summary>
+    <ul class="dash-list" id="dashboardList"></ul>
+  </details>
+
+  <div class="footer-actions">
+    <button class="btn-reset" id="resetBtn">¿Cómo reinicio el sorteo completo?</button>
+  </div>
+
+<script type="module">
+  "use strict";
+
+  // ============================================================
+  // SUPABASE: reemplaza esto con la URL y la "anon key" de TU
+  // proyecto (Supabase dashboard -> Settings -> API).
+  // Mientras diga "TU_SUPABASE_URL", la página funciona en modo
+  // local (solo en este dispositivo) para que puedas probarla.
+  //
+  // Antes de que esto funcione, en el SQL Editor de tu proyecto
+  // de Supabase corre:
+  //
+  //   create table reveals (
+  //     giver_id text primary key,
+  //     revealed_at timestamptz default now()
+  //   );
+  //   alter table reveals enable row level security;
+  //   create policy "lectura publica" on reveals
+  //     for select using (true);
+  //   create policy "insercion publica" on reveals
+  //     for insert with check (true);
+  //   alter publication supabase_realtime add table reveals;
+  //
+  // (No se crean políticas de UPDATE ni DELETE a propósito: así
+  // nadie puede borrar o pisar un resultado ya revelado desde el
+  // navegador, ni siquiera el que giró.)
+  // ============================================================
+  const SUPABASE_URL = "https://zqcqdqezsigiopuqzodx.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_PPiG6Zfvg6d251Ixrh3kKQ_Y7cbEgoB";
+
+  const REVEALS_TABLE = "reveals";
+  let supabaseClient = null;
+  let supabaseEnabled = false;
+
+  async function initSupabase(){
+    if(!SUPABASE_URL || SUPABASE_URL === "TU_SUPABASE_URL") return false;
+    try{
+      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+      supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      return true;
+    }catch(e){
+      console.error("No se pudo inicializar Supabase, se usará modo local:", e);
+      return false;
+    }
+  }
+
+  // ---------- Datos de participantes y restricciones ----------
+  // Las personas con el mismo "group" NO pueden salirse entre ellas.
+  // group = null significa sin restricción especial (aparte de la básica).
+  const PEOPLE = [
+    { id: "maria_clara",    name: "Maria Clara",    group: "A" },
+    { id: "carlos",         name: "Carlos",          group: "A" },
+    { id: "daniela",        name: "Daniela",         group: "A" },
+
+    { id: "johana",         name: "Johana",          group: "B" },
+    { id: "maria_antonia",  name: "Maria Antonia",   group: "B" },
+    { id: "beatriz",        name: "Beatriz",         group: "B" },
+    { id: "juan_david",     name: "Juan David",      group: "B" },
+
+    { id: "yesica",         name: "Yesica",          group: "C" },
+    { id: "luisfer",        name: "Luisfer",         group: "C" },
+
+    { id: "esteban",        name: "Esteban",         group: "D" },
+    { id: "mari_luz",       name: "Mari Luz",        group: "D" },
+    { id: "alejo",          name: "Alejo",           group: "D" },
+
+    { id: "estella",        name: "Estella",         group: null }
+  ];
+
+  const LOCAL_KEY = "amigoSecretoFamiliar_local_revealed";
+  const SPIN_COLORS = ["#ff5d8f","#ffd166","#4fd1c5","#7b61ff","#ff9f68","#6ee7b7","#f472b6","#60a5fa"];
+
+  // Semilla fija: hace que el sorteo sea SIEMPRE el mismo en cualquier
+  // dispositivo/navegador que abra esta página, sin necesidad de servidor.
+  // Si algún día quieres un sorteo nuevo, cambia este número.
+  const DRAW_SEED = 20261205;
+
+  // ---------- PRNG determinista (mulberry32) ----------
+  function makeRng(seed){
+    let s = seed >>> 0;
+    return function(){
+      s = (s + 0x6D2B79F5) | 0;
+      let t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function shuffle(arr, rng){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(rng()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+
+  function isValidPerm(perm){
+    for(let i=0;i<PEOPLE.length;i++){
+      if(perm[i] === i) return false;
+      const giver = PEOPLE[i];
+      const recipient = PEOPLE[perm[i]];
+      if(giver.group !== null && giver.group === recipient.group) return false;
+    }
+    return true;
+  }
+
+  function backtrackAssign(rng){
+    const n = PEOPLE.length;
+    const giverOrder = shuffle([...Array(n).keys()], rng);
+    const used = new Array(n).fill(false);
+    const perm = new Array(n).fill(-1);
+
+    function valid(giverIdx, recipientIdx){
+      if(giverIdx === recipientIdx) return false;
+      const giver = PEOPLE[giverIdx];
+      const recipient = PEOPLE[recipientIdx];
+      if(giver.group !== null && giver.group === recipient.group) return false;
+      return true;
+    }
+
+    function backtrack(pos){
+      if(pos === n) return true;
+      const giverIdx = giverOrder[pos];
+      const candidates = shuffle([...Array(n).keys()].filter(i=>!used[i]), rng);
+      for(const recIdx of candidates){
+        if(valid(giverIdx, recIdx)){
+          used[recIdx] = true;
+          perm[giverIdx] = recIdx;
+          if(backtrack(pos+1)) return true;
+          used[recIdx] = false;
+          perm[giverIdx] = -1;
+        }
+      }
+      return false;
+    }
+
+    backtrack(0);
+    return perm;
+  }
+
+  function generateAssignment(){
+    const rng = makeRng(DRAW_SEED);
+    const n = PEOPLE.length;
+    for(let attempt=0; attempt<20000; attempt++){
+      const perm = shuffle([...Array(n).keys()], rng);
+      if(isValidPerm(perm)) return perm;
+    }
+    return backtrackAssign(rng);
+  }
+
+  // La asignación es 100% determinista: todo dispositivo que abra esta
+  // misma página calcula exactamente el mismo sorteo, sin necesidad de
+  // sincronizar nada por internet.
+  const ASSIGNMENT = generateAssignment();
+
+  // ---------- Estado de "quién ya giró" ----------
+  const state = { revealedGivers: [], ready: false };
+  let currentGiverIdx = null;
+
+  function idxFromGiverId(id){
+    return PEOPLE.findIndex(p => p.id === id);
+  }
+
+  function applyRevealedIds(ids){
+    state.revealedGivers = ids.map(idxFromGiverId).filter(i => i !== -1);
+  }
+
+  function loadLocalRevealedIds(){
+    try{
+      const raw = localStorage.getItem(LOCAL_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    }catch(e){ return []; }
+  }
+
+  function saveLocalRevealedIds(ids){
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(ids));
+  }
+
+  function localMark(giverId){
+    const ids = loadLocalRevealedIds();
+    if(!ids.includes(giverId)){
+      ids.push(giverId);
+      saveLocalRevealedIds(ids);
+    }
+    applyRevealedIds(ids);
+  }
+
+  function recipientOf(giverIdx){
+    return ASSIGNMENT[giverIdx];
+  }
+
+  function alreadyGivenOutRecipientIndexes(){
+    return new Set(state.revealedGivers.map(gIdx => ASSIGNMENT[gIdx]));
+  }
+
+  async function markRevealed(giverIdx){
+    const giverId = PEOPLE[giverIdx].id;
+    if(supabaseEnabled){
+      try{
+        const { error } = await supabaseClient.from(REVEALS_TABLE).insert({ giver_id: giverId });
+        if(error && error.code !== "23505"){ // 23505 = ya existía (alguien lo insertó primero), lo ignoramos
+          throw error;
+        }
+      }catch(e){
+        console.error("No se pudo guardar en Supabase, se guarda solo local:", e);
+        localMark(giverId);
+      }
+    } else {
+      localMark(giverId);
+    }
+  }
+
+  // ---------- UI ----------
+  const personSelect = document.getElementById("personSelect");
+  const wheelArea = document.getElementById("wheelArea");
+  const actionArea = document.getElementById("actionArea");
+  const resultArea = document.getElementById("resultArea");
+  const statusPill = document.getElementById("statusPill");
+  const connNote = document.getElementById("connNote");
+  const resetBtn = document.getElementById("resetBtn");
+  const dashboardList = document.getElementById("dashboardList");
+
+  PEOPLE.forEach((p, idx) => {
+    const opt = document.createElement("option");
+    opt.value = idx;
+    opt.textContent = p.name;
+    personSelect.appendChild(opt);
+  });
+
+  function updateStatusPill(){
+    const done = state.revealedGivers.length;
+    const total = PEOPLE.length;
+    statusPill.style.display = "inline-block";
+    statusPill.textContent = `${done} de ${total} ya giraron`;
+  }
+
+  function renderDashboard(){
+    dashboardList.innerHTML = "";
+    PEOPLE.forEach((p, idx) => {
+      const li = document.createElement("li");
+      const already = state.revealedGivers.includes(idx);
+      li.innerHTML = `<span>${p.name}</span><span class="${already ? "dash-ok" : "dash-pending"}">${already ? "✅ Ya giró" : "⏳ Pendiente"}</span>`;
+      dashboardList.appendChild(li);
+    });
+  }
+
+  function renderForPerson(giverIdx){
+    wheelArea.innerHTML = "";
+    actionArea.innerHTML = "";
+    resultArea.innerHTML = "";
+    updateStatusPill();
+
+    const giver = PEOPLE[giverIdx];
+    const alreadySpun = state.revealedGivers.includes(giverIdx);
+
+    if(alreadySpun){
+      const recIdx = recipientOf(giverIdx);
+      resultArea.innerHTML = `
+        <div class="result-box">
+          Ya giraste, <b>${giver.name}</b>.<br>
+          Tu amigo secreto es: <b>${PEOPLE[recIdx].name}</b> 🎉
+        </div>
+        <div class="hint">Shhh... no se lo digas a nadie 🤫</div>
+      `;
+      return;
+    }
+
+    // Candidatos visibles en la ruleta: no revelados aun como recipiente,
+    // distintos de si mismo, y fuera de su grupo restringido.
+    const takenRecipients = alreadyGivenOutRecipientIndexes();
+    const candidateIdxs = PEOPLE
+      .map((p, idx) => idx)
+      .filter(idx => idx !== giverIdx)
+      .filter(idx => !takenRecipients.has(idx))
+      .filter(idx => giver.group === null || PEOPLE[idx].group !== giver.group);
+
+    const targetIdx = recipientOf(giverIdx);
+    if(!candidateIdxs.includes(targetIdx)){
+      candidateIdxs.push(targetIdx); // salvaguarda, no debería ocurrir
+    }
+
+    buildWheel(candidateIdxs, targetIdx, giverIdx);
+  }
+
+  function refreshCurrentView(){
+    if(currentGiverIdx !== null){
+      renderForPerson(currentGiverIdx);
+    } else {
+      updateStatusPill();
+    }
+    renderDashboard();
+  }
+
+  function buildWheel(candidateIdxs, targetIdx, giverIdx){
+    const wrap = document.createElement("div");
+    wrap.className = "wheel-wrap";
+
+    const pointer = document.createElement("div");
+    pointer.className = "pointer";
+    wrap.appendChild(pointer);
+
+    const outer = document.createElement("div");
+    outer.className = "wheel-outer";
+
+    const wheel = document.createElement("div");
+    wheel.className = "wheel";
+
+    const n = candidateIdxs.length;
+    const segAngle = 360 / n;
+
+    const gradientParts = [];
+    candidateIdxs.forEach((pIdx, k) => {
+      const color = SPIN_COLORS[k % SPIN_COLORS.length];
+      const start = k * segAngle;
+      const end = (k+1) * segAngle;
+      gradientParts.push(`${color} ${start}deg ${end}deg`);
+    });
+    wheel.style.background = `conic-gradient(${gradientParts.join(",")})`;
+
+    candidateIdxs.forEach((pIdx, k) => {
+      const centerAngle = k * segAngle + segAngle/2;
+      const label = document.createElement("div");
+      label.className = "segment-label";
+      label.textContent = PEOPLE[pIdx].name;
+      label.style.left = "50%";
+      label.style.top = "50%";
+      label.style.width = "120px";
+      label.style.marginLeft = "0";
+      label.style.marginTop = "-0.6em";
+      label.style.textAlign = "right";
+      label.style.transformOrigin = "0% 50%";
+      label.style.transform = `rotate(${centerAngle}deg) translateX(14px)`;
+      wheel.appendChild(label);
+    });
+
+    const dot = document.createElement("div");
+    dot.className = "wheel-center-dot";
+    wheel.appendChild(dot);
+
+    outer.appendChild(wheel);
+    wrap.appendChild(outer);
+    wheelArea.appendChild(wrap);
+
+    const targetK = candidateIdxs.indexOf(targetIdx);
+    const centerAngleTarget = targetK * segAngle + segAngle/2;
+    const desiredMod = (360 - centerAngleTarget + 360) % 360;
+    const fullTurns = 5;
+    const finalRotation = fullTurns * 360 + desiredMod;
+
+    const spinBtn = document.createElement("button");
+    spinBtn.className = "btn-main";
+    spinBtn.textContent = "🎡 Girar la ruleta";
+    actionArea.appendChild(spinBtn);
+
+    spinBtn.addEventListener("click", () => {
+      spinBtn.disabled = true;
+      personSelect.disabled = true;
+      wheel.style.transition = "transform 3.2s cubic-bezier(0.17, 0.67, 0.12, 0.99)";
+      wheel.style.transform = `rotate(${finalRotation}deg)`;
+
+      setTimeout(async () => {
+        await markRevealed(giverIdx);
+        personSelect.disabled = false;
+        renderForPerson(giverIdx);
+        renderDashboard();
+      }, 3300);
+    });
+  }
+
+  personSelect.addEventListener("change", () => {
+    const idx = parseInt(personSelect.value, 10);
+    if(!isNaN(idx)){
+      currentGiverIdx = idx;
+      renderForPerson(idx);
+    }
+  });
+
+  resetBtn.addEventListener("click", () => {
+    if(supabaseEnabled){
+      alert(
+        "Para reiniciar el sorteo completo:\n\n" +
+        "1. Entra a tu proyecto de Supabase -> Table Editor.\n" +
+        "2. Abre la tabla 'reveals'.\n" +
+        "3. Borra todas las filas.\n\n" +
+        "Por seguridad, borrar el progreso de todos NO se puede hacer desde esta página (así nadie puede hacer trampa borrando su propio resultado)."
+      );
+    } else {
+      const sure = confirm(
+        "Estás en modo local (sin Supabase configurado).\n\n¿Quieres borrar el progreso guardado en ESTE dispositivo?"
+      );
+      if(!sure) return;
+      saveLocalRevealedIds([]);
+      applyRevealedIds([]);
+      refreshCurrentView();
+    }
+  });
+
+  // ---------- Arranque ----------
+  function enableSelectUI(message){
+    state.ready = true;
+    personSelect.disabled = false;
+    personSelect.options[0].textContent = "-- Selecciona tu nombre --";
+    connNote.textContent = message;
+    refreshCurrentView();
+  }
+
+  async function start(){
+    supabaseEnabled = await initSupabase();
+
+    if(supabaseEnabled){
+      try{
+        const { data, error } = await supabaseClient.from(REVEALS_TABLE).select("giver_id");
+        if(error) throw error;
+        applyRevealedIds((data || []).map(r => r.giver_id));
+
+        supabaseClient
+          .channel("reveals-sync")
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: REVEALS_TABLE }, (payload) => {
+            const ids = new Set(state.revealedGivers.map(idx => PEOPLE[idx].id));
+            ids.add(payload.new.giver_id);
+            applyRevealedIds([...ids]);
+            refreshCurrentView();
+          })
+          .subscribe();
+
+        enableSelectUI("🟢 Sincronizado en vivo con todos los dispositivos.");
+      }catch(e){
+        console.error("Error conectando con Supabase:", e);
+        supabaseEnabled = false;
+        applyRevealedIds(loadLocalRevealedIds());
+        enableSelectUI("🟡 No se pudo conectar: funcionando solo en este dispositivo.");
+      }
+    } else {
+      applyRevealedIds(loadLocalRevealedIds());
+      enableSelectUI("🟡 Modo local: el progreso solo se guarda en este dispositivo (configura Supabase para sincronizar entre todos).");
+    }
+  }
+
+  start();
+</script>
+</body>
+</html>
