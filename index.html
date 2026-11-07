@@ -3,43 +3,107 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎁 Ruleta de Amigo Navideño Familiar</title>
+<title>🎄 Ruleta de Amigo Navideño Familiar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#1b1033;
-    --bg2:#2a1a4d;
-    --card:#241642;
-    --accent:#ff5d8f;
-    --accent2:#ffd166;
-    --accent3:#4fd1c5;
-    --accent4:#7b61ff;
-    --text:#f4f0ff;
-    --muted:#b3a6d9;
-    --ok:#4fd1c5;
-    --pending:#b3a6d9;
+    --bg:#0a2317;
+    --bg2:#123524;
+    --card:#123a27;
+    --accent:#e2484d;
+    --accent2:#f4c35e;
+    --accent3:#8fd9a8;
+    --accent4:#2f7a52;
+    --text:#fdf6ec;
+    --muted:#b7cdbd;
+    --ok:#8fd9a8;
+    --pending:#b7cdbd;
   }
   *{box-sizing:border-box;}
   body{
     margin:0;
     min-height:100vh;
     font-family:'Segoe UI', Tahoma, Verdana, sans-serif;
-    background:radial-gradient(circle at top, var(--bg2), var(--bg));
+    background:
+      radial-gradient(circle at 20% 0%, rgba(244,195,94,0.08), transparent 40%),
+      radial-gradient(circle at top, var(--bg2), var(--bg));
     color:var(--text);
     display:flex;
     flex-direction:column;
     align-items:center;
     padding:24px 16px 60px;
+    position:relative;
+    overflow-x:hidden;
   }
   h1{
+    font-family:'Mountains of Christmas', 'Segoe UI', cursive;
     text-align:center;
-    font-size:1.8rem;
-    margin:10px 0 4px;
+    font-size:2.6rem;
+    font-weight:700;
+    margin:10px 0 2px;
+    color:var(--accent2);
+    text-shadow:0 2px 10px rgba(244,195,94,0.35);
   }
   p.subtitle{
     color:var(--muted);
     text-align:center;
+    margin:0 0 20px;
+    max-width:480px;
+  }
+  .lights{
+    display:flex;
+    gap:14px;
+    margin:2px 0 18px;
+    padding:0;
+    list-style:none;
+  }
+  .lights span{
+    width:10px;
+    height:14px;
+    border-radius:50% 50% 45% 45%;
+    display:block;
+    animation:twinkle 1.6s ease-in-out infinite;
+  }
+  .lights li:nth-child(5n+1) span{ background:var(--accent); box-shadow:0 0 8px var(--accent); }
+  .lights li:nth-child(5n+2) span{ background:var(--accent2); box-shadow:0 0 8px var(--accent2); }
+  .lights li:nth-child(5n+3) span{ background:var(--accent3); box-shadow:0 0 8px var(--accent3); }
+  .lights li:nth-child(5n+4) span{ background:var(--accent4); box-shadow:0 0 8px var(--accent4); }
+  .lights li:nth-child(5n+5) span{ background:#e8e3d5; box-shadow:0 0 8px #e8e3d5; }
+  .lights li:nth-child(odd) span{ animation-delay:.4s; }
+  .lights li:nth-child(3n) span{ animation-delay:.8s; }
+  @keyframes twinkle{
+    0%, 100%{ opacity:0.45; transform:scale(0.9); }
+    50%{ opacity:1; transform:scale(1.1); }
+  }
+  .photo-strip{
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+    justify-content:center;
     margin:0 0 24px;
     max-width:480px;
+  }
+  .photo-strip figure{
+    margin:0;
+    background:#fdf6ec;
+    padding:8px 8px 14px;
+    border-radius:6px;
+    box-shadow:0 8px 18px rgba(0,0,0,0.35);
+  }
+  .photo-strip figure:nth-child(1){ transform:rotate(-4deg); }
+  .photo-strip figure:nth-child(2){ transform:rotate(2deg); }
+  .photo-strip figure:nth-child(3){ transform:rotate(-1deg); }
+  .photo-strip img{
+    display:block;
+    width:112px;
+    height:112px;
+    object-fit:cover;
+    border-radius:2px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .lights span{ animation:none; opacity:0.9; }
   }
   .card{
     background:var(--card);
@@ -56,7 +120,7 @@
     border-radius:12px;
     border:none;
     font-size:1rem;
-    background:#352260;
+    background:#0f2d1e;
     color:var(--text);
     margin-bottom:16px;
     appearance:none;
@@ -100,7 +164,7 @@
     width:100%;
     height:100%;
     border-radius:50%;
-    border:8px solid #352260;
+    border:8px solid #0f2d1e;
     overflow:hidden;
     position:relative;
     box-shadow:inset 0 0 20px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,255,255,0.05);
@@ -130,7 +194,7 @@
     text-align:right;
     font-size:0.72rem;
     font-weight:700;
-    color:#1b1033;
+    color:#0a2317;
     text-shadow:0 1px 0 rgba(255,255,255,0.3);
     pointer-events:none;
     white-space:nowrap;
@@ -218,7 +282,7 @@
     border-radius:12px;
     border:none;
     font-size:1rem;
-    background:#352260;
+    background:#0f2d1e;
     color:var(--text);
     margin-bottom:10px;
     letter-spacing:2px;
@@ -230,12 +294,45 @@
     margin-top:-4px;
     margin-bottom:10px;
   }
+  .snow{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    overflow:hidden;
+    z-index:0;
+  }
+  .snow span{
+    position:absolute;
+    top:-10px;
+    color:#fdf6ec;
+    opacity:0.75;
+    animation:fall linear infinite;
+  }
+  @keyframes fall{
+    to{ transform:translateY(110vh) translateX(var(--drift,0px)); }
+  }
+  body > *:not(.snow){ position:relative; z-index:1; }
+  @media (prefers-reduced-motion: reduce){
+    .snow{ display:none; }
+  }
 </style>
 </head>
 <body>
 
-  <h1>🎁 Amigo Navideño Familiar</h1>
+  <div class="snow" id="snow" aria-hidden="true"></div>
+
+  <h1>🎄 Amigo Navideño Familiar</h1>
+  <ul class="lights" aria-hidden="true">
+    <li><span></span></li><li><span></span></li><li><span></span></li><li><span></span></li><li><span></span></li>
+    <li><span></span></li><li><span></span></li><li><span></span></li><li><span></span></li><li><span></span></li>
+  </ul>
   <p class="subtitle">Selecciona tu nombre y crea (o ingresa) tu clave para ver tu resultado. El resultado se sincroniza al instante en todos los dispositivos: nadie puede girar dos veces, ni ver el resultado de otra persona sin su clave.</p>
+
+  <div class="photo-strip">
+    <figure><img src="Fotos/1.jpeg" alt="Foto familiar 1" loading="lazy"></figure>
+    <figure><img src="Fotos/2.jpeg" alt="Foto familiar 2" loading="lazy"></figure>
+    <figure><img src="Fotos/3.jpeg" alt="Foto familiar 3" loading="lazy"></figure>
+  </div>
 
   <div class="card">
     <div id="statusPill" class="status-pill" style="display:none;"></div>
@@ -349,7 +446,7 @@
   ];
 
   const LOCAL_KEY = "amigoSecretoFamiliar_local_revealed";
-  const SPIN_COLORS = ["#ff5d8f","#ffd166","#4fd1c5","#7b61ff","#ff9f68","#6ee7b7","#f472b6","#60a5fa"];
+  const SPIN_COLORS = ["#e2484d","#f4c35e","#8fd9a8","#2f7a52","#f28b82","#d4af37","#c75c5c","#6fae8c"];
 
   // Semilla fija: hace que el sorteo sea SIEMPRE el mismo en cualquier
   // dispositivo/navegador que abra esta página, sin necesidad de servidor.
@@ -877,6 +974,23 @@
     }
   }
 
+  function initSnow(){
+    const el = document.getElementById("snow");
+    if(!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const count = window.innerWidth < 500 ? 18 : 28;
+    for(let i=0;i<count;i++){
+      const flake = document.createElement("span");
+      flake.textContent = Math.random() > 0.5 ? "❄" : "❅";
+      flake.style.left = (Math.random()*100) + "vw";
+      flake.style.fontSize = (10 + Math.random()*14) + "px";
+      flake.style.animationDuration = (8 + Math.random()*10) + "s";
+      flake.style.animationDelay = "-" + (Math.random()*10) + "s";
+      flake.style.setProperty("--drift", (Math.random()*80 - 40) + "px");
+      el.appendChild(flake);
+    }
+  }
+
+  initSnow();
   start();
 </script>
 </body>
